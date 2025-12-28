@@ -5,6 +5,7 @@ import Job from "../models/Job.js";
 import { requireGuestKey, enforceAllowedUrl } from "../middlewares/requireGuestKey.js";
 import { detectTechnology } from "../utils/detectTechnology.js";
 import { getPageSpeedScore } from "../utils/pageSpeed.js";
+import { measurePagePerformance } from "../utils/pagePerf.js";
 
 const router = express.Router();
 
@@ -160,78 +161,146 @@ function normalizeAndValidateUrl(input) {
 //   }
 // });
 
-router.post("/meta-scrape", enforceAllowedUrl, async (req, res) => {
-  const inputUrl = String(req.body?.url || req.guestProject?.websiteUrl || "").trim();
-  if (!inputUrl) return res.status(400).json({ ok: false, error: "URL is required" });
+// router.post("/meta-scrape", enforceAllowedUrl, async (req, res) => {
+//   const inputUrl = String(req.body?.url || req.guestProject?.websiteUrl || "").trim();
+//   if (!inputUrl) return res.status(400).json({ ok: false, error: "URL is required" });
 
-  // (Optional but recommended) validate/normalize like old
-  const v = normalizeAndValidateUrl(inputUrl);
-  if (!v.ok) return res.status(400).json({ ok: false, error: v.message });
+//   // (Optional but recommended) validate/normalize like old
+//   const v = normalizeAndValidateUrl(inputUrl);
+//   if (!v.ok) return res.status(400).json({ ok: false, error: v.message });
+
+//   let browser;
+//   try {
+//     browser = await chromium.launch({ headless: true });
+//     const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+
+//     const navStart = Date.now();
+//     const response = await page.goto(v.normalized, { waitUntil: "load", timeout: 45000 });
+//     const navEnd = Date.now();
+
+//     const status = response?.status?.() ?? null;
+//     const fetchedUrl = response?.url?.() || v.normalized;
+
+//     const headers = response?.headers?.() || {};
+//     const html = await page.content();
+
+//     const meta = await page.evaluate(() => {
+//       const pickAttr = (sel, attr) => document.querySelector(sel)?.getAttribute(attr) || "";
+//       const pick = (sel) => pickAttr(sel, "content");
+
+//       const favicon =
+//         pickAttr('link[rel="icon"]', "href") ||
+//         pickAttr('link[rel="shortcut icon"]', "href") ||
+//         pickAttr('link[rel="apple-touch-icon"]', "href") ||
+//         "";
+
+//       return {
+//         title: document.title || "",
+//         description: pick('meta[name="description"]'),
+//         canonical: pickAttr('link[rel="canonical"]', "href"),
+//         ogTitle: pick('meta[property="og:title"]'),
+//         ogDescription: pick('meta[property="og:description"]'),
+//         ogImage: pick('meta[property="og:image"]'),
+//         // favicon,
+//       };
+//     });
+
+//     const timing = await page.evaluate(() => {
+//       const nav = performance.getEntriesByType("navigation")[0];
+//       if (!nav) return null;
+//       return {
+//         ttfbMs: nav.responseStart - nav.requestStart,
+//         domContentLoadedMs: nav.domContentLoadedEventEnd,
+//         loadEventMs: nav.loadEventEnd,
+//       };
+//     });
+
+//     const pageLoadMs =
+//       timing?.loadEventMs && timing.loadEventMs > 0
+//         ? Math.round(timing.loadEventMs)
+//         : Math.round(navEnd - navStart);
+
+//     const technology = detectTechnology({ url: fetchedUrl, html, headers });
+//     const pageSpeed = await getPageSpeedScore(fetchedUrl);
+
+//     return res.json({
+//       ok: true,
+//       fetchedUrl,
+//       status, // ✅ old wali cheez wapas
+//       meta,
+//       perf: {
+//         pageLoadMs,
+//         ttfbMs: timing?.ttfbMs ? Math.round(timing.ttfbMs) : null,
+//         domContentLoadedMs: timing?.domContentLoadedMs ? Math.round(timing.domContentLoadedMs) : null,
+//       },
+//       technology,
+//       pageSpeed,
+//     });
+//   } catch (e) {
+//     return res.status(500).json({ ok: false, error: e?.message || "Meta scrape failed" });
+//   } finally {
+//     if (browser) {
+//       try { await browser.close(); } catch {}
+//     }
+//   }
+// });
+
+router.post("/meta-scrape", enforceAllowedUrl, async (req, res) => {
+  const url = String(req.body?.url || "").trim();
+  if (!url) return res.status(400).json({ ok: false, error: "URL is required" });
 
   let browser;
   try {
+    // 1) Accurate load timing (median of 3)
+    const perf = await measurePagePerformance(url, { runs: 3 });
+
+    // 2) Use one Playwright run to extract meta + html + headers + status
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
 
-    const navStart = Date.now();
-    const response = await page.goto(v.normalized, { waitUntil: "load", timeout: 45000 });
-    const navEnd = Date.now();
-
+    const response = await page.goto(url, { waitUntil: "load", timeout: 45000 });
     const status = response?.status?.() ?? null;
-    const fetchedUrl = response?.url?.() || v.normalized;
 
     const headers = response?.headers?.() || {};
     const html = await page.content();
+    const fetchedUrl = page.url();
 
     const meta = await page.evaluate(() => {
-      const pickAttr = (sel, attr) => document.querySelector(sel)?.getAttribute(attr) || "";
-      const pick = (sel) => pickAttr(sel, "content");
+      const pick = (sel, attr = "content") =>
+        document.querySelector(sel)?.getAttribute(attr) || "";
 
       const favicon =
-        pickAttr('link[rel="icon"]', "href") ||
-        pickAttr('link[rel="shortcut icon"]', "href") ||
-        pickAttr('link[rel="apple-touch-icon"]', "href") ||
+        pick('link[rel="icon"]', "href") ||
+        pick('link[rel="shortcut icon"]', "href") ||
+        pick('link[rel="apple-touch-icon"]', "href") ||
         "";
 
       return {
         title: document.title || "",
         description: pick('meta[name="description"]'),
-        canonical: pickAttr('link[rel="canonical"]', "href"),
+        canonical: pick('link[rel="canonical"]', "href"),
         ogTitle: pick('meta[property="og:title"]'),
         ogDescription: pick('meta[property="og:description"]'),
         ogImage: pick('meta[property="og:image"]'),
-        // favicon,
+        favicon,
       };
     });
 
-    const timing = await page.evaluate(() => {
-      const nav = performance.getEntriesByType("navigation")[0];
-      if (!nav) return null;
-      return {
-        ttfbMs: nav.responseStart - nav.requestStart,
-        domContentLoadedMs: nav.domContentLoadedEventEnd,
-        loadEventMs: nav.loadEventEnd,
-      };
-    });
+    // ✅ Fix favicon (relative -> absolute)
+    const faviconAbs = meta.favicon ? new URL(meta.favicon, fetchedUrl).toString() : "";
 
-    const pageLoadMs =
-      timing?.loadEventMs && timing.loadEventMs > 0
-        ? Math.round(timing.loadEventMs)
-        : Math.round(navEnd - navStart);
-
+    // 3) Technology detect (your util)
     const technology = detectTechnology({ url: fetchedUrl, html, headers });
-    const pageSpeed = await getPageSpeedScore(fetchedUrl);
+
+    // 4) Accurate/repeatable PageSpeed score (median of 3)
+    const pageSpeed = await getPageSpeedScore(fetchedUrl, { runs: 3 });
 
     return res.json({
       ok: true,
       fetchedUrl,
-      status, // ✅ old wali cheez wapas
-      meta,
-      perf: {
-        pageLoadMs,
-        ttfbMs: timing?.ttfbMs ? Math.round(timing.ttfbMs) : null,
-        domContentLoadedMs: timing?.domContentLoadedMs ? Math.round(timing.domContentLoadedMs) : null,
-      },
+      status,
+      meta: { ...meta, favicon: faviconAbs },
+      perf,
       technology,
       pageSpeed,
     });
