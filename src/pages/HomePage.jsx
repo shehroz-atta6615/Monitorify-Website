@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { validateHttpUrl } from "../utils/validateUrl.js";
 import { generateProject } from "../api/public.js";
+import '../designPages/HomePage.css'
 
 const LS_KEY = "siterelic_guest_project";
 
@@ -47,7 +48,8 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-  const useMock = String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
+  const useMock =
+    String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
 
   // ✅ load saved project into state
   useEffect(() => {
@@ -158,199 +160,173 @@ export default function HomePage() {
     }
   }
 
+  const statusLabel = isExpired ? "Expired" : "Ready";
+
   return (
-    <div style={styles.wrap}>
-      <div style={styles.stack}>
-        {/* Continue block (only if saved) */}
-        {lastProject ? (
-          <div style={styles.card}>
-            <div style={styles.topRow}>
-              <div>
-                <div style={styles.kicker}>Saved project</div>
-                <h2 style={styles.h2}>Continue where you left off</h2>
-              </div>
+    <div className="sr-home">
+      {/* animated background layers */}
+      <div className="sr-bg" aria-hidden="true">
+        <div className="sr-bg__grid" />
+        <div className="sr-bg__orb sr-bg__orb--a" />
+        <div className="sr-bg__orb sr-bg__orb--b" />
+        <div className="sr-bg__orb sr-bg__orb--c" />
+        <div className="sr-bg__noise" />
+      </div>
 
-              <button onClick={onClearSaved} style={styles.btnGhost} type="button">
-                Clear saved
-              </button>
+      <div className="sr-shell">
+        <header className="sr-header">
+          <div className="sr-brand">
+            <div className="sr-logo" aria-hidden="true">
+              <span className="sr-logo__dot" />
+            </div>
+            <div className="sr-brand__text">
+              <div className="sr-kicker">SiteRelic</div>
+              <div className="sr-title">Site API Generator</div>
+            </div>
+          </div>
+
+          <div className="sr-header__meta">
+            <div className="sr-badge">
+              <span className="sr-badge__label">Mode</span>
+              <span className="sr-badge__value">
+                {useMock ? "Mock" : "Live"}
+              </span>
             </div>
 
-            <div style={styles.meta}>
-              <div style={styles.metaRow}>
-                <span style={styles.metaKey}>URL</span>
-                <code style={styles.codeInline}>{lastProject.websiteUrl}</code>
-              </div>
-
-              <div style={styles.metaRow}>
-                <span style={styles.metaKey}>Allowed domain</span>
-                <code style={styles.codeInline}>{lastAllowedDomain || "—"}</code>
-              </div>
-
-              <div style={styles.metaRow}>
-                <span style={styles.metaKey}>Expires in</span>
-                <code style={styles.codeInline}>
-                  {lastProject.expiresAt
-                    ? (isExpired ? "Expired" : msToTime(remaining))
-                    : (isExpired ? "Expired" : "—")}
-                </code>
-              </div>
+            <div className="sr-badge sr-badge--wide">
+              <span className="sr-badge__label">API Base</span>
+              <code className="sr-code">{apiBase}</code>
             </div>
+          </div>
+        </header>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-              <button onClick={onContinue} style={styles.button} type="button">
-                Continue
-              </button>
-
-              {isExpired ? (
-                <div style={styles.pill}>
-                  Expired — open project to regenerate key
+        <main className="sr-stack">
+          {/* Continue block (only if saved) */}
+          {lastProject ? (
+            <section className="sr-card sr-card--lift sr-animate-in">
+              <div className="sr-card__top">
+                <div>
+                  <div className="sr-kicker">Saved project</div>
+                  <h2 className="sr-h2">Continue where you left off</h2>
                 </div>
-              ) : (
-                <div style={styles.pill}>Ready</div>
-              )}
+
+                <button
+                  onClick={onClearSaved}
+                  className="sr-btn sr-btn--ghost"
+                  type="button"
+                >
+                  Clear saved
+                </button>
+              </div>
+
+              <div className="sr-meta">
+                <div className="sr-meta__row">
+                  <span className="sr-meta__key">URL</span>
+                  <code className="sr-code sr-code--wrap">
+                    {lastProject.websiteUrl}
+                  </code>
+                </div>
+
+                <div className="sr-meta__row">
+                  <span className="sr-meta__key">Allowed domain</span>
+                  <code className="sr-code">
+                    {lastAllowedDomain || "—"}
+                  </code>
+                </div>
+
+                <div className="sr-meta__row">
+                  <span className="sr-meta__key">Expires in</span>
+                  <code className={`sr-code ${isExpired ? "sr-code--danger" : ""}`}>
+                    {lastProject.expiresAt
+                      ? isExpired
+                        ? "Expired"
+                        : msToTime(remaining)
+                      : isExpired
+                      ? "Expired"
+                      : "—"}
+                  </code>
+                </div>
+              </div>
+
+              <div className="sr-actions">
+                <button
+                  onClick={onContinue}
+                  className="sr-btn sr-btn--primary"
+                  type="button"
+                >
+                  Continue
+                </button>
+
+                <div
+                  className={`sr-pill ${
+                    isExpired ? "sr-pill--danger" : "sr-pill--ok"
+                  }`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {isExpired ? "Expired — open project to regenerate key" : "Ready"}
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {/* Generate new */}
+          <section className="sr-card sr-card--hero sr-animate-in">
+            <h1 className="sr-h1">Site API Generator (MVP)</h1>
+            <p className="sr-p">
+              Paste your website URL and we’ll generate a guest API key + endpoints.
+            </p>
+
+            <form onSubmit={onSubmit} className="sr-form">
+              <div className="sr-inputWrap">
+                <span className="sr-inputIcon" aria-hidden="true">🔗</span>
+                <input
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="sr-input"
+                  autoComplete="off"
+                />
+                <span className="sr-inputGlow" aria-hidden="true" />
+              </div>
+
+              <button
+                disabled={loading}
+                className={`sr-btn sr-btn--primary ${loading ? "sr-isLoading" : ""}`}
+                type="submit"
+              >
+                <span className="sr-btn__shine" aria-hidden="true" />
+                {loading ? "Generating..." : "Generate API"}
+              </button>
+            </form>
+
+            {error ? (
+              <div className="sr-alert sr-alert--danger" role="alert">
+                <div className="sr-alert__title">Fix this</div>
+                <div className="sr-alert__body">{error}</div>
+              </div>
+            ) : null}
+
+            <div className="sr-footerNote">
+              <div className="sr-mini">
+                <span className="sr-mini__k">Status</span>
+                <span className={`sr-mini__v ${isExpired ? "sr-mini__v--danger" : "sr-mini__v--ok"}`}>
+                  {statusLabel}
+                </span>
+              </div>
+
+              <div className="sr-divider" />
+
+              <div className="sr-mini">
+                <span className="sr-mini__k">Tip</span>
+                <span className="sr-mini__v">
+                  Your saved project will auto-sync every 10s.
+                </span>
+              </div>
             </div>
-          </div>
-        ) : null}
-
-        {/* Generate new */}
-        <div style={styles.card}>
-          <h1 style={styles.h1}>Site API Generator (MVP)</h1>
-          <p style={styles.p}>
-            Paste your website URL and we’ll generate a guest API key + endpoints.
-          </p>
-
-          <form onSubmit={onSubmit} style={styles.form}>
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com"
-              style={styles.input}
-              autoComplete="off"
-            />
-            <button disabled={loading} style={styles.button} type="submit">
-              {loading ? "Generating..." : "Generate API"}
-            </button>
-          </form>
-
-          {error ? <div style={styles.error}>{error}</div> : null}
-
-          <div style={styles.note}>
-            <div>
-              <strong>Mode:</strong> {useMock ? "Mock (no backend)" : "Live backend"}
-            </div>
-            <div style={{ marginTop: 6 }}>
-              <strong>API Base:</strong> <code style={styles.codeInline}>{apiBase}</code>
-            </div>
-          </div>
-        </div>
+          </section>
+        </main>
       </div>
     </div>
   );
 }
-
-const styles = {
-  wrap: {
-    minHeight: "100vh",
-    display: "grid",
-    placeItems: "center",
-    padding: 24,
-    background: "#0b0f17",
-    color: "#e8eefc",
-  },
-  stack: {
-    width: "min(840px, 100%)",
-    display: "grid",
-    gap: 14,
-  },
-  card: {
-    background: "#121a2a",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 16,
-    padding: 22,
-  },
-  topRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "start",
-  },
-  kicker: { fontSize: 12, opacity: 0.7, marginBottom: 6 },
-  h1: { margin: 0, fontSize: 26 },
-  h2: { margin: 0, fontSize: 20 },
-  p: { marginTop: 8, opacity: 0.85, marginBottom: 0 },
-  form: { display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" },
-  input: {
-    flex: 1,
-    minWidth: 240,
-    padding: "12px 14px",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "#0f1625",
-    color: "#e8eefc",
-    outline: "none",
-  },
-  button: {
-    padding: "12px 14px",
-    borderRadius: 12,
-    border: "none",
-    cursor: "pointer",
-    background: "#4a7dff",
-    color: "#fff",
-    fontWeight: 800,
-    minWidth: 160,
-    opacity: 1,
-  },
-  btnGhost: {
-    padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.14)",
-    cursor: "pointer",
-    background: "transparent",
-    color: "#e8eefc",
-    fontWeight: 800,
-  },
-  error: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    background: "rgba(255, 67, 67, 0.12)",
-    border: "1px solid rgba(255, 67, 67, 0.25)",
-  },
-  note: {
-    marginTop: 14,
-    opacity: 0.85,
-    fontSize: 13,
-    padding: 12,
-    borderRadius: 12,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
-  },
-  meta: {
-    marginTop: 12,
-    display: "grid",
-    gap: 10,
-  },
-  metaRow: {
-    display: "grid",
-    gridTemplateColumns: "140px 1fr",
-    gap: 10,
-    alignItems: "center",
-  },
-  metaKey: { fontSize: 13, opacity: 0.75 },
-  codeInline: {
-    display: "inline-block",
-    padding: "6px 10px",
-    borderRadius: 12,
-    background: "#0f1625",
-    border: "1px solid rgba(255,255,255,0.10)",
-  },
-  pill: {
-    padding: "10px 12px",
-    borderRadius: 999,
-    background: "rgba(74,125,255,0.16)",
-    border: "1px solid rgba(74,125,255,0.25)",
-    fontSize: 13,
-    fontWeight: 700,
-    alignSelf: "center",
-  },
-};

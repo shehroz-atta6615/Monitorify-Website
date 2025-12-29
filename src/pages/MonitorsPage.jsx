@@ -7,6 +7,7 @@ import {
   deleteMonitor,
 } from "../api/monitors.js";
 import { validateHttpUrl } from "../utils/validateUrl.js";
+import '../designPages/MonitorsPage.css'
 
 const LS_KEY = "siterelic_guest_project";
 
@@ -67,7 +68,6 @@ export default function MonitorsPage() {
       const data = await listMonitors({ apiBase, apiKey: project.apiKey });
       setItems(data?.monitors || []);
     } catch (e) {
-      // auto refresh me spam na ho, but still show latest error once
       setErr(e?.message || "Failed to load monitors");
     } finally {
       refreshingRef.current = false;
@@ -160,264 +160,247 @@ export default function MonitorsPage() {
 
   if (!project) {
     return (
-      <div style={styles.wrap}>
-        <div style={styles.card}>
-          <h2 style={{ marginTop: 0 }}>No project found</h2>
-          <p style={{ opacity: 0.85 }}>
-            Go back and generate a guest API key first.
-          </p>
-          <Link to="/" style={styles.link}>
-            ← Back to home
-          </Link>
+      <div className="srm-page">
+        <div className="srm-bg" aria-hidden="true">
+          <div className="srm-bg__grid" />
+          <div className="srm-bg__orb srm-bg__orb--a" />
+          <div className="srm-bg__orb srm-bg__orb--b" />
+          <div className="srm-bg__orb srm-bg__orb--c" />
+          <div className="srm-bg__noise" />
+        </div>
+
+        <div className="srm-shell">
+          <div className="srm-card srm-animate-in">
+            <h2 className="srm-h2">No project found</h2>
+            <p className="srm-p">Go back and generate a guest API key first.</p>
+            <Link to="/" className="srm-link">
+              ← Back to home
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.card}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-          <div>
-            <h2 style={{ margin: 0 }}>Monitors</h2>
-            <div style={{ opacity: 0.8, marginTop: 6 }}>
-              Allowed domain: <code>{allowedDomain || "—"}</code>
+    <div className="srm-page">
+      <div className="srm-bg" aria-hidden="true">
+        <div className="srm-bg__grid" />
+        <div className="srm-bg__orb srm-bg__orb--a" />
+        <div className="srm-bg__orb srm-bg__orb--b" />
+        <div className="srm-bg__orb srm-bg__orb--c" />
+        <div className="srm-bg__noise" />
+      </div>
+
+      <div className="srm-shell">
+        <header className="srm-header srm-animate-in">
+          <div className="srm-brand">
+            <div className="srm-logo" aria-hidden="true">
+              <span className="srm-logo__dot" />
+            </div>
+
+            <div className="srm-brand__text">
+              <div className="srm-kicker">SiteRelic</div>
+              <div className="srm-title">Monitors</div>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div className="srm-header__actions">
             <button
               type="button"
               onClick={() => refresh({ silent: false })}
-              style={styles.btnGhost}
+              className={`srm-btn srm-btn--ghost ${loading ? "srm-isLoading" : ""}`}
             >
               {loading ? "Refreshing..." : "Refresh"}
             </button>
 
-            <Link to={`/p/${project.projectId}`} style={styles.link}>
+            <Link to={`/p/${project.projectId}`} className="srm-link srm-link--pill">
               ← Back to project
             </Link>
           </div>
-        </div>
+        </header>
 
-        <div style={styles.section}>
-          <div style={styles.label}>Create monitor</div>
+        <main className="srm-stack">
+          {/* Overview */}
+          <section className="srm-card srm-card--lift srm-animate-in">
+            <div className="srm-summary">
+              <div className="srm-summary__left">
+                <div className="srm-kicker">Scope</div>
 
-          <form onSubmit={onCreate} style={styles.formGrid}>
-            <div>
-              <div style={styles.smallLabel}>Name</div>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Homepage"
-                style={styles.input}
-              />
-            </div>
+                <div className="srm-line">
+                  <span className="srm-line__k">Allowed domain</span>
+                  <code className="srm-code">{allowedDomain || "—"}</code>
+                </div>
 
-            <div>
-              <div style={styles.smallLabel}>URL (same domain only)</div>
-              <input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com"
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.twoCols}>
-              <div>
-                <div style={styles.smallLabel}>Interval (sec)</div>
-                <input
-                  type="number"
-                  value={intervalSec}
-                  onChange={(e) => setIntervalSec(e.target.value)}
-                  style={styles.input}
-                  min={60}
-                />
-              </div>
-
-              <div>
-                <div style={styles.smallLabel}>Timeout (ms)</div>
-                <input
-                  type="number"
-                  value={timeoutMs}
-                  onChange={(e) => setTimeoutMs(e.target.value)}
-                  style={styles.input}
-                  min={1000}
-                />
-              </div>
-            </div>
-
-            <label style={styles.checkRow}>
-              <input
-                type="checkbox"
-                checked={followRedirects}
-                onChange={(e) => setFollowRedirects(e.target.checked)}
-              />
-              <span>Follow redirects</span>
-            </label>
-
-            <button style={styles.btn} type="submit">
-              Add Monitor
-            </button>
-          </form>
-
-          {err ? <div style={styles.toast}>{err}</div> : null}
-        </div>
-
-        <div style={styles.section}>
-          <div style={styles.label}>
-            Your monitors {loading ? "(loading...)" : `(${items.length})`}
-          </div>
-
-          <div style={{ display: "grid", gap: 10 }}>
-            {items.map((m) => (
-              <div key={m._id} style={styles.monCard}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 800 }}>{m.name || "(no name)"}</div>
-
-                    <div style={{ opacity: 0.85, marginTop: 4 }}>
-                      <code>{m.url}</code>
-                    </div>
-
-                    <div style={{ opacity: 0.75, marginTop: 6, fontSize: 13 }}>
-                      {m.isActive ? "Active" : "Paused"} • Interval: {m.intervalSec}s • Timeout:{" "}
-                      {m.timeoutMs}ms • Redirects: {m.followRedirects ? "On" : "Off"}
-                    </div>
-
-                    <div style={{ opacity: 0.75, marginTop: 6, fontSize: 13 }}>
-                      Last: {m.lastStatus}{" "}
-                      {m.lastHttpStatus ? `(${m.lastHttpStatus})` : ""}
-                      {m.lastResponseTimeMs ? ` • ${m.lastResponseTimeMs}ms` : ""}
-                      {m.lastError ? ` • ${m.lastError}` : ""}
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignSelf: "start" }}>
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(m)}
-                      style={styles.btnGhost}
-                    >
-                      {m.isActive ? "Pause" : "Resume"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onDelete(m)}
-                      style={styles.btnDanger}
-                    >
-                      Delete
-                    </button>
-                  </div>
+                <div className="srm-line">
+                  <span className="srm-line__k">Total monitors</span>
+                  <code className="srm-code">{items.length}</code>
                 </div>
               </div>
-            ))}
 
-            {!loading && items.length === 0 ? (
-              <div style={styles.empty}>No monitors yet. Add your first one above.</div>
-            ) : null}
-          </div>
-        </div>
+              <div className="srm-summary__right">
+                <div className={`srm-pill ${loading ? "srm-pill--busy" : "srm-pill--ok"}`}>
+                  {loading ? "Syncing" : "Live"}
+                </div>
+              </div>
+            </div>
+
+            {err ? <div className="srm-alert srm-alert--danger">{err}</div> : null}
+          </section>
+
+          {/* Create */}
+          <section className="srm-card srm-animate-in">
+            <div className="srm-sectionHead">
+              <div>
+                <div className="srm-kicker">Create</div>
+                <div className="srm-h3">Add a monitor</div>
+              </div>
+              <div className="srm-hint">Same domain only</div>
+            </div>
+
+            <div className="srm-panel">
+              <form onSubmit={onCreate} className="srm-formGrid">
+                <div className="srm-field">
+                  <div className="srm-smallLabel">Name</div>
+                  <div className="srm-inputWrap">
+                    <span className="srm-inputIcon" aria-hidden="true">🏷️</span>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Homepage"
+                      className="srm-input"
+                    />
+                    <span className="srm-inputGlow" aria-hidden="true" />
+                  </div>
+                </div>
+
+                <div className="srm-field">
+                  <div className="srm-smallLabel">URL</div>
+                  <div className="srm-inputWrap">
+                    <span className="srm-inputIcon" aria-hidden="true">🔗</span>
+                    <input
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      className="srm-input"
+                    />
+                    <span className="srm-inputGlow" aria-hidden="true" />
+                  </div>
+                </div>
+
+                <div className="srm-twoCols">
+                  <div className="srm-field">
+                    <div className="srm-smallLabel">Interval (sec)</div>
+                    <input
+                      type="number"
+                      value={intervalSec}
+                      onChange={(e) => setIntervalSec(e.target.value)}
+                      className="srm-smallInput"
+                      min={60}
+                    />
+                  </div>
+
+                  <div className="srm-field">
+                    <div className="srm-smallLabel">Timeout (ms)</div>
+                    <input
+                      type="number"
+                      value={timeoutMs}
+                      onChange={(e) => setTimeoutMs(e.target.value)}
+                      className="srm-smallInput"
+                      min={1000}
+                    />
+                  </div>
+                </div>
+
+                <label className="srm-checkRow">
+                  <input
+                    type="checkbox"
+                    checked={followRedirects}
+                    onChange={(e) => setFollowRedirects(e.target.checked)}
+                  />
+                  <span>Follow redirects</span>
+                </label>
+
+                <button className="srm-btn srm-btn--primary" type="submit">
+                  <span className="srm-btn__shine" aria-hidden="true" />
+                  Add Monitor
+                </button>
+              </form>
+            </div>
+          </section>
+
+          {/* List */}
+          <section className="srm-card srm-animate-in">
+            <div className="srm-row srm-row--top">
+              <div>
+                <div className="srm-kicker">List</div>
+                <div className="srm-h3">
+                  Your monitors{" "}
+                  <span className="srm-muted">
+                    {loading ? "(loading...)" : `(${items.length})`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="srm-list">
+              {items.map((m) => (
+                <div key={m._id} className="srm-monCard">
+                  <div className="srm-monTop">
+                    <div className="srm-monMain">
+                      <div className="srm-monName">{m.name || "(no name)"}</div>
+
+                      <div className="srm-monUrl">
+                        <code className="srm-code srm-code--inline">{m.url}</code>
+                      </div>
+
+                      <div className="srm-monMeta">
+                        <span className={`srm-badge ${m.isActive ? "srm-badge--ok" : "srm-badge--muted"}`}>
+                          {m.isActive ? "Active" : "Paused"}
+                        </span>
+                        <span>Interval: {m.intervalSec}s</span>
+                        <span>Timeout: {m.timeoutMs}ms</span>
+                        <span>Redirects: {m.followRedirects ? "On" : "Off"}</span>
+                      </div>
+
+                      <div className="srm-monMeta srm-monMeta--sub">
+                        <span>Last: {m.lastStatus}</span>
+                        {m.lastHttpStatus ? <span>({m.lastHttpStatus})</span> : null}
+                        {m.lastResponseTimeMs ? <span>• {m.lastResponseTimeMs}ms</span> : null}
+                        {m.lastError ? <span className="srm-dangerText">• {m.lastError}</span> : null}
+                      </div>
+                    </div>
+
+                    <div className="srm-monActions">
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(m)}
+                        className="srm-btn srm-btn--ghost"
+                      >
+                        {m.isActive ? "Pause" : "Resume"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onDelete(m)}
+                        className="srm-btn srm-btn--danger"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {!loading && items.length === 0 ? (
+                <div className="srm-empty">
+                  No monitors yet. Add your first one above.
+                </div>
+              ) : null}
+            </div>
+          </section>
+        </main>
       </div>
     </div>
   );
 }
-
-const styles = {
-  wrap: {
-    minHeight: "100vh",
-    padding: 24,
-    background: "#0b0f17",
-    color: "#e8eefc",
-    display: "grid",
-    placeItems: "start center",
-  },
-  card: {
-    width: "min(920px, 100%)",
-    background: "#121a2a",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 16,
-    padding: 22,
-  },
-  section: { marginTop: 18 },
-  label: { fontSize: 13, opacity: 0.75, marginBottom: 8 },
-  smallLabel: { fontSize: 13, opacity: 0.7, marginBottom: 6, marginTop: 10 },
-  link: { color: "#8fb0ff", textDecoration: "none", fontWeight: 700 },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "#0b0f17",
-    color: "#e8eefc",
-    outline: "none",
-  },
-  formGrid: {
-    display: "grid",
-    gap: 10,
-    padding: 14,
-    borderRadius: 14,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
-  },
-  twoCols: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-  },
-  checkRow: { display: "flex", gap: 8, alignItems: "center", marginTop: 6 },
-  btn: {
-    padding: "12px 14px",
-    borderRadius: 12,
-    border: "none",
-    cursor: "pointer",
-    background: "#4a7dff",
-    color: "#fff",
-    fontWeight: 800,
-    marginTop: 4,
-    width: "fit-content",
-    minWidth: 160,
-  },
-  btnGhost: {
-    padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.14)",
-    cursor: "pointer",
-    background: "transparent",
-    color: "#e8eefc",
-    fontWeight: 800,
-  },
-  btnDanger: {
-    padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid rgba(255, 67, 67, 0.35)",
-    cursor: "pointer",
-    background: "rgba(255, 67, 67, 0.12)",
-    color: "#ffd7d7",
-    fontWeight: 800,
-  },
-  toast: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 12,
-    background: "rgba(74,125,255,0.16)",
-    border: "1px solid rgba(74,125,255,0.25)",
-    fontSize: 13,
-  },
-  monCard: {
-    padding: 14,
-    borderRadius: 14,
-    background: "#0f1625",
-    border: "1px solid rgba(255,255,255,0.10)",
-  },
-  empty: {
-    marginTop: 6,
-    padding: 12,
-    borderRadius: 12,
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    opacity: 0.85,
-  },
-};
