@@ -314,7 +314,123 @@ router.post("/meta-scrape", enforceAllowedUrl, async (req, res) => {
 });
 
 
+// router.post("/meta-scrape", enforceAllowedUrl, async (req, res) => {
+//   const inputUrl = String(req.body?.url || req.guestProject?.websiteUrl || "").trim();
+//   if (!inputUrl) return res.status(400).json({ ok: false, error: "URL is required" });
+
+//   const v = normalizeAndValidateUrl(inputUrl);
+//   if (!v.ok) return res.status(400).json({ ok: false, error: v.message });
+
+//   let browser;
+//   try {
+//     // 1) More repeatable timings (median)
+//     const perf = await measurePagePerformance(v.normalized, { runs: Number(process.env.PERF_RUNS || 3) });
+
+//     // 2) One Playwright run for status/headers/html/meta
+//     browser = await chromium.launch({
+//       headless: true,
+//       args: [
+//         "--no-sandbox",
+//         "--disable-setuid-sandbox",
+//         "--disable-dev-shm-usage",
+//         "--disable-gpu",
+//         "--disable-background-networking",
+//         "--disable-background-timer-throttling",
+//         "--disable-renderer-backgrounding",
+//         "--disable-extensions",
+//         "--mute-audio",
+//       ],
+//     });
+
+//     const context = await browser.newContext({
+//       viewport: { width: 1366, height: 768 },
+//       locale: "en-US",
+//       userAgent:
+//         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+//       serviceWorkers: "block",
+//     });
+
+//     const page = await context.newPage();
+
+//     // Disable cache properly via CDP (more reliable than headers)
+//     const cdp = await context.newCDPSession(page);
+//     await cdp.send("Network.enable");
+//     await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
+
+//     // Navigate (avoid waiting forever on SPAs)
+//     let response = null;
+//     try {
+//       response = await page.goto(v.normalized, { waitUntil: "domcontentloaded", timeout: 45000 });
+//       await page.waitForLoadState("load", { timeout: 20000 }).catch(() => {});
+//       await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+//     } catch {
+//       response = await page.goto(v.normalized, { waitUntil: "commit", timeout: 45000 });
+//     }
+
+//     const status = response?.status?.() ?? null;
+//     const headers = response?.headers?.() || {};
+//     const html = await page.content();
+//     const fetchedUrl = page.url() || v.normalized;
+
+//     const meta = await page.evaluate(() => {
+//       const pick = (sel, attr = "content") => document.querySelector(sel)?.getAttribute(attr) || "";
+
+//       const favicon =
+//         pick('link[rel="icon"]', "href") ||
+//         pick('link[rel="shortcut icon"]', "href") ||
+//         pick('link[rel="apple-touch-icon"]', "href") ||
+//         "";
+
+//       return {
+//         title: document.title || "",
+//         description: pick('meta[name="description"]'),
+//         canonical: pick('link[rel="canonical"]', "href"),
+//         ogTitle: pick('meta[property="og:title"]'),
+//         ogDescription: pick('meta[property="og:description"]'),
+//         ogImage: pick('meta[property="og:image"]'),
+//         favicon,
+//       };
+//     });
+
+//     // Fix favicon relative -> absolute
+//     const faviconAbs = meta.favicon ? new URL(meta.favicon, fetchedUrl).toString() : "";
+
+//     // 3) Technology detect
+//     const technology = detectTechnology({ url: fetchedUrl, html, headers });
+
+//     // 4) ✅ PSI-first PageSpeed (near-identical to online tools)
+//     const pageSpeed = await getPageSpeedScore(fetchedUrl, {
+//       provider: "psi",
+//       strategy: String(process.env.PSI_STRATEGY || "mobile").toLowerCase(), // mobile/desktop
+//       // runs not needed for PSI, but harmless if your util ignores it
+//       runs: Number(process.env.LH_RUNS || 3),
+//     });
+
+//     await context.close();
+
+//     return res.json({
+//       ok: true,
+//       fetchedUrl,
+//       status,
+//       meta: { ...meta, favicon: faviconAbs },
+//       perf,
+//       technology,
+//       pageSpeed,
+//     });
+//   } catch (e) {
+//     return res.status(500).json({ ok: false, error: e?.message || "Meta scrape failed" });
+//   } finally {
+//     if (browser) {
+//       try { await browser.close(); } catch {}
+//     }
+//   }
+// });
+
+
+
 // SCREENSHOT JOB
+
+
 router.post("/screenshot", enforceAllowedUrl, async (req, res) => {
   const url = String(req.body?.url || req.guestProject.websiteUrl || "").trim();
   const v = normalizeAndValidateUrl(url);

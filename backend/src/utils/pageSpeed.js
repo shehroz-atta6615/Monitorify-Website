@@ -107,3 +107,7 @@ export async function getPageSpeedScore(url, opts = {}) {
     allRuns: { scores, lcp, fcp, tbt, cls, tti },
   };
 }
+
+
+
+

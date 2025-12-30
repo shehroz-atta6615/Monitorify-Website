@@ -80,9 +80,11 @@ function statusPretty(status) {
   return `${n} ${label}`;
 }
 
-// ✅ one-line status highlight text (no box)
-function deriveStatusLine(status) {
+// ✅ one-line status highlight text (no box) + include final host if available
+function deriveStatusLine(status, fetchedUrl) {
   const code = Number(status);
+  const finalHost = fetchedUrl ? safeHostname(fetchedUrl) : "";
+  const finalBit = finalHost ? ` Final host: ${finalHost}.` : "";
 
   if (!Number.isFinite(code)) {
     return {
@@ -94,34 +96,34 @@ function deriveStatusLine(status) {
   if (code >= 200 && code < 300) {
     return {
       tone: "ok",
-      text: `Your website is OK — it returned ${code} (success).`,
+      text: `Your website is OK — ${statusPretty(code)}.${finalBit}`,
     };
   }
 
   if (code >= 300 && code < 400) {
     return {
       tone: "warm",
-      text: `Your website is reachable, but it redirected (${code}). If this is unexpected, check redirects.`,
+      text: `Your website is reachable but redirected — ${statusPretty(code)}.${finalBit}`,
     };
   }
 
   if (code >= 400 && code < 500) {
     return {
       tone: "danger",
-      text: `Your website returned ${code} (client-side issue). Check the URL, permissions, or routing.`,
+      text: `Your website returned ${statusPretty(code)} (client-side issue).${finalBit}`,
     };
   }
 
   if (code >= 500 && code < 600) {
     return {
       tone: "danger",
-      text: `Your server returned ${code} (server-side issue). Check hosting and server logs.`,
+      text: `Your server returned ${statusPretty(code)} (server-side issue).${finalBit}`,
     };
   }
 
   return {
     tone: "warm",
-    text: `Your website returned ${code}. Please verify the response.`,
+    text: `Your website returned ${statusPretty(code)}.${finalBit}`,
   };
 }
 
@@ -431,7 +433,7 @@ export default function ProjectPage() {
   useEffect(() => {
     if (!project) return;
     setOpts(mergeOpts(project?.opts));
-  }, [project?.projectId]);
+  }, [project?.projectId, project?.opts]);
 
   function persistOptions(nextOpts) {
     if (!project) return;
@@ -819,8 +821,8 @@ export default function ProjectPage() {
   const score = testResult?.pageSpeed?.score ?? null;
   const httpStatus = testResult?.status ?? null;
 
-  // ✅ status highlight line content
-  const statusLine = deriveStatusLine(httpStatus);
+  // ✅ status highlight line content (URL-aware)
+  const statusLine = deriveStatusLine(httpStatus, testResult?.fetchedUrl);
 
   return (
     <div className="srp-page">
@@ -1000,8 +1002,13 @@ export default function ProjectPage() {
 
                 {/* ✅ ONE-LINE status highlight (no box) */}
                 <div className={`srp-statusLine srp-statusLine--${statusLine.tone}`}>
-                  <span className={`srp-statusDot srp-statusDot--${statusLine.tone}`} aria-hidden="true" />
-                  <span className="srp-statusText">{statusLine.text}</span>
+                  <span
+                    className={`srp-statusDot srp-statusDot--${statusLine.tone}`}
+                    aria-hidden="true"
+                  />
+                  <span className="srp-statusText" title={statusLine.text}>
+                    {statusLine.text}
+                  </span>
                 </div>
 
                 {/* ✅ JSON output with scroll */}

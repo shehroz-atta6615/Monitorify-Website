@@ -464,9 +464,9 @@
   position: relative;
   z-index: 1;
 
-  white-space: nowrap;
+  /* keep the row tidy; actual ellipsis is on .srp-statusText */
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .srp-statusDot{
@@ -478,7 +478,13 @@
   box-shadow: 0 10px 26px rgba(12,18,36,0.10);
 }
 
+/* ✅ FIX: ellipsis works correctly inside flex */
 .srp-statusText{
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: rgba(8,18,42,0.78);
 }
 
@@ -880,6 +886,12 @@
 
   /* allow wrapping for the status line on small screens */
   .srp-statusLine{
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .srp-statusText{
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
